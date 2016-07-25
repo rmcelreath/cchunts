@@ -33,7 +33,6 @@ data(Reyes_Garcia)
 data(Sillitoe)
 data(Siren)
 data(Trumble_Gurven)
-data(Van_Vliet_et_al_Africa_three_sites)
 data(Van_Vliet_et_al_Baego)
 data(Van_Vliet_et_al_Djoutou)
 data(Van_Vliet_et_al_Gabon)
@@ -56,6 +55,7 @@ data(Ziker)
         \item trip_id_orig : Identifier in raw data (for reference and cross-check)
         \item observed : 0/1 indicator of whether trip was directory observed or verbally reported
         \item trip_date : Calendar date on which trip occurred
+        \item trip_year : Calendar year of trip
         \item julian_date_s : Standardized Julian date of trip
         \item day_id : Identifier for unique day in sample
         \item trip_duration : Duration in hours

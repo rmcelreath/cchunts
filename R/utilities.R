@@ -57,7 +57,7 @@ cchunts_data_sets <- c(
 'Sillitoe',
 'Siren',
 'Trumble_Gurven',
-'Van_Vliet_et_al_Africa_three_sites',
+#'Van_Vliet_et_al_Africa_three_sites',
 'Van_Vliet_et_al_Baego',
 'Van_Vliet_et_al_Djoutou',
 'Van_Vliet_et_al_Gabon',
@@ -194,7 +194,172 @@ make_joint <- function( data_sets , ... ) {
     return( invisible( joint_data ) )
 }
 
-# function to take raw data and transform into trip records
+# preps joined data sets so ready to feed into Stan model
+prep_data <- function( dat , debug=FALSE ) {
+
+    N_soc <- length(unique(dat$society_id)) 
+
+    # find NA pooled
+    idx <- which( is.na(dat$pooled) )
+    if ( length(idx)>0 ) {
+        message(concat("Found ",length(idx), " NA pooled values:"))
+        print(data.frame(idx,society=dat$society[idx],forager=dat$forager_id[idx]))
+        message("Marking these as pooled==0.")
+        dat$pooled[idx] <- rep(0,length(idx))
+    }
+
+    # find NA dogs
+    if ( !is.null(dat$dogs) ) {
+        idx <- which( is.na(dat$dogs) )
+        if ( length(idx)>0 ) {
+            message(concat("Found ",length(idx), " NA dogs values:"))
+            #print(data.frame(idx,society=dat$society[idx],forager=dat$forager_id[idx]))
+            message("Marking these as dogs==0.")
+            dat$dogs[idx] <- rep(0,length(idx))
+        }
+    }
+
+    # calculate year offset within each society
+    # need this to correctly impute ages that are of type "Uniform"
+    # calculation is just:
+    # (1) find earliest date in society
+    # (2) for each harvest, enter harvest year - earliest year
+    # then in model, we add this offset to uniform imputation for each forager
+    # this procedure obeys uniform interval on age while also aging forager by a year each year
+    dat$trip_year_offset <- rep(NA,nrow(dat))
+    for ( j in 1:N_soc ) {
+        soc_name <- unique(dat$society[dat$society_id==j])
+        min_year <- 0
+        #trip_year <- as.integer(substr(dat$trip_date[dat$society_id==j],1,4))
+        trip_year <- as.integer( dat$trip_year[dat$society_id==j] )
+        min_year <- min( trip_year , na.rm=TRUE )
+        if ( min_year==Inf ) {
+            message(concat("BEWARE: No trip years recorded for ",soc_name,". Using 1970 for min_year."))
+            min_year <- 1970
+        }
+        if ( debug==TRUE ) print(paste(soc_name," - ",min_year))
+        dat$trip_year_offset[dat$society_id==j] <- trip_year - min_year
+    }
+    dat$trip_year_offset <- ifelse(is.na(dat$trip_year_offset),0,dat$trip_year_offset)
+
+    # prep age data input for Stan
+    age_obs <- ifelse( dat$age_type %in% c("Exact","Uncertain") , dat$age_dist_1 , (dat$age_dist_1+dat$age_dist_2)/2 )
+    age2 <- dat$age_dist_2
+    sdunif <- function(a,b) sqrt((1/12)*(a-b)^2)
+    age2 <- ifelse( dat$age_type %in% c("Exact","Uncertain") , age2 , sdunif(dat$age_dist_1,dat$age_dist_2) )
+    age2 <- ifelse( dat$age_type == "Uncertain" , age2/2 , age2 ) # Uncertain coded as 95% interval, not standard error
+    # formula above inserts stddev of uniform interval
+
+    # count max number of foragers on a single trip (needed internally for matrix declaration)
+    max_n <- 0
+    tid_list <- sort(unique(dat$trip_id))
+    for ( j in tid_list ) {
+        n <- length(which(dat$trip_id==j))
+        if ( n > max_n ) max_n <- n
+    }
+
+    # build assistant matrix
+    idx <- grep( "a_._id" , names(dat) )
+    if ( length(idx)==0 ) idx <- grep( "A" , names(dat) ) # simulated data uses A# format
+    Assist_matrix <- matrix( 0 , nrow=nrow(dat) , ncol=9 )
+    for ( i in 1:length(idx) ) Assist_matrix[,i] <- na_to_x(dat[[idx[i]]])
+
+    # count number of societies and unique foragers (including assistants)
+    Total_foragers <- max( c( dat$forager_id , unlist(dat[,idx]) ) , na.rm=TRUE )
+
+    # Lupo_Schmitt rows with missing durations but should not be
+    if ( FALSE ) {
+
+    idx <- which(dat$society=="Lupo_Schmitt" & dat$trip_id_soc==1 & is.na(dat$trip_duration) )
+    if ( length(idx) > 0 )
+        dat$trip_duration[idx] <- 4.3 # duration from previous
+    idx <- which(dat$society=="Lupo_Schmitt" & dat$trip_id_soc==22 & is.na(dat$trip_duration) )
+    if ( length(idx) > 0 )
+        dat$trip_duration[idx] <- 5.3
+    idx <- which(dat$society=="Lupo_Schmitt" & dat$trip_id_soc==23 & is.na(dat$trip_duration) )
+    if ( length(idx) > 0 )
+        dat$trip_duration[idx] <- 4
+
+    }
+
+    # standardize harvests and trip durations
+    hstd <- dat$harvest
+    duration_std <- dat$trip_duration
+    for ( j in 1:N_soc ) {
+        idx <- dat$society_id==j
+        hmean <- mean( dat$harvest[idx] )
+        hstddev <- sd( dat$harvest[idx] )
+        hstd[idx] <- ( hstd[idx] / hmean )#/hstddev
+        dmean <- mean( dat$trip_duration[idx] , na.rm=TRUE )
+        dstddev <- sd( dat$trip_duration[idx] , na.rm=TRUE )
+        duration_std[idx] <- ( duration_std[idx] / dmean )#/dstddev
+        if ( debug==TRUE ) {
+            print(concat(j," H /",hmean,"/",hstddev))
+            print(concat(j," TD /",dmean,"/",dstddev))
+        }#debug
+    }
+    dat$hstd <- hstd
+    dat$duration_std <- duration_std
+
+    # check for empty dogs and gun columns
+    if ( is.null(dat$dogs) ) dat$dogs <- 0
+    if ( is.null(dat$gun) ) dat$gun <- 0
+
+    # build data to pass to Stan
+    dat_list <- list(
+        N = nrow(dat),
+        N_hunters = Total_foragers,
+        N_societies = N_soc,
+        hunter_id = dat$forager_id,
+        soc_id = dat$society_id,
+        hours = na_to_x( dat$duration_std , -1 ), # -1 is mark for imputation in Stan code
+        harvest = hstd, #dat$harvest,
+        age_interval = ifelse(dat$age_type=="Uniform",1,0)*0,
+        age = age_obs,
+        age2 = age2,
+        trip_year_offset = dat$trip_year_offset,
+        ref_age = 80,
+        N_trips = max(dat$trip_id),
+        trip_id = dat$trip_id,
+        pooled = dat$pooled,
+        A = Assist_matrix,
+        max_foragers_per_trip = max_n,
+        dogs = na_to_x(dat$dogs,0),
+        firearms = na_to_x(dat$gun,0)
+    )
+
+    # check for zero trip durations
+    for ( i in 1:length(dat_list$hours) ) {
+        y <- dat_list$hours[i]
+        if ( y > -1 ) {
+            if ( log(y)==-Inf ) {
+                message( concat("duration ZERO found at index ",i," - patching to exp(-5)") )
+                dat_list$hours[i] <- exp(-5)
+            }
+        }
+    }
+
+    # find all NA age values and specify for imputation
+    idx <- which( is.na(dat_list$age) )
+    # cbind( idx , dat$society[idx] , dat$forager_id[idx] )
+    if ( length(idx)>0 ) {
+        message(concat("Found ",length(idx)," NA age values. Marking for imputation as: age ~ normal(42.5,10.8)"))
+        #print( data.frame( idx , society=dat$society[idx] , forager=dat$forager_id[idx] ) )
+        for ( i in idx ) {
+            # specify as gaussian
+            dat_list$age[i] <- 85/2
+            #dat_list$age2[i] <- 0 + 0*sdunif(5,80)
+            dat_list$age2[i] <- sdunif(5,80)/2
+            dat_list$age_interval[i] <- 0
+        }
+    }
+
+    invisible(dat_list)
+
+}
+# dat_list <- prep_data(dat)
+
+# function to take prepped data and transform into trip records
 # the Stan code does this internally
 trans_trips <- function( d ) {
 

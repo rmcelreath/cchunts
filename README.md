@@ -18,7 +18,7 @@ The data sets made available in the package are documented:
 ```
 ?cchunts
 ```
-See also ``?make_joint``.
+See also ``?make_joint`` for a method to merge data sets into a single table.
 
 
 ## Simulation and validation

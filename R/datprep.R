@@ -15,7 +15,7 @@ datprepper <- function( file , objectname , save=TRUE , path="~/Dropbox/Cross-cu
         "trip_id", "trip_id_orig", "observed", "trip_date", "julian_date_s", "day_id", 
         "trip_duration", "day_trip", "group_type", "pooled", "harvest", 
         "forager_id", "forager_id_orig", "age_type" , "age_dist_1", "age_dist_2", 
-        "dogs", "gun"
+        "dogs", "gun", "trip_year"
     )
 
     # make unique trip ID index
@@ -32,6 +32,17 @@ datprepper <- function( file , objectname , save=TRUE , path="~/Dropbox/Cross-cu
     if ( !is.null(d$Hunt.Date) )
         d$trip_date <- as.Date( d$Hunt.Date , format="%m/%d/%Y" ) # long year format mm/dd/yyyy
     d$julian_date_s <- scale( julian( d$trip_date ) )
+
+    # trip year
+    if ( !is.null(d$Hunt.year) ) {
+        d$trip_year <- as.integer( d$Hunt.year )
+    } else {
+        if ( !is.null(d$year) ) {
+            d$trip_year <- as.integer( d$year )
+        } else {
+            warning(concat("No Hunt.year for ",file))
+        }
+    }
 
     # unique day indicator, for clustering by specific date
     d$day_id <- coerce_index( d$trip_date )

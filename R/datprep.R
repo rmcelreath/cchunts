@@ -1,5 +1,5 @@
 # converts csv 
-datprepper <- function( file , objectname , save=TRUE , path="~/Dropbox/Cross-cultural hunting study/working data and scripts/cchunts/data/" , debug=FALSE ) {
+datprepper <- function( file , objectname , save=TRUE , path="data_rda/" , debug=FALSE ) {
 
     # file e.g.: "data/Alvard.csv"
     # objectname e.g.: "Alvard" --- is what data() will load it as
@@ -14,7 +14,7 @@ datprepper <- function( file , objectname , save=TRUE , path="~/Dropbox/Cross-cu
     resultlist <- c(
         "trip_id", "trip_id_orig", "observed", "trip_date", "julian_date_s", "day_id", 
         "trip_duration", "day_trip", "group_type", "pooled", "harvest", 
-        "forager_id", "forager_id_orig", "age_type" , "age_dist_1", "age_dist_2", 
+        "forager_id", "forager_id_orig", "age_type" , "age_dist_1", "age_dist_2", "sex",
         "dogs", "gun", "trip_year"
     )
 
@@ -81,6 +81,12 @@ datprepper <- function( file , objectname , save=TRUE , path="~/Dropbox/Cross-cu
         total_foragers <- max(d$forager_id)
     }
     d$forager_id_orig <- d$Hunter
+
+    #### forager sex
+    if ( !is.null(d$Hunter.Sex) )
+        d$sex <- d$Hunter.Sex
+    else
+        d$sex <- "M"
 
     ########################
     #### Age

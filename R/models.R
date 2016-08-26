@@ -3,6 +3,9 @@ ccmodel_full <- "
 // varying intercepts on forager life history parameters
 // imputation of missing trip durations
 // adds cobb-douglas style elasticity to skill components
+// TO DO:
+// add sex of forager
+// potential to add: observed (indicator of anthropologist presence)
 data{
     int N;
     int N_hunters;
@@ -12,8 +15,10 @@ data{
     real age2[N];           // stderr of age or (when interval) upper bound
     real trip_year_offset[N];
     real hours[N];
+    int day_trip[N];        // 0/1 indicator of whether trip exceeded a single day
     real harvest[N];
     int hunter_id[N];
+    int forager_female[N];
     int soc_id[N];
     real ref_age;
     int N_trips;
@@ -34,10 +39,12 @@ transformed data{
     int trip_soc_id[N_trips];
     int forager_ids[N_trips,max_foragers_per_trip];
     vector[max_foragers_per_trip] forager_age[N_trips];
+    vector[max_foragers_per_trip] trip_forager_female[N_trips];
     vector[max_foragers_per_trip] trip_harvests[N_trips];
     vector[2] zeros2;
     vector[3] zeros3;
     vector[N_trips] trip_hours;
+    vector[N_trips] trip_xday;          // trip exceeded a single day (camping)
     int forager_soc_id[N_hunters];      // useful for precomputing individual skill parameters
     int trip_counted[N_trips];
     // duration imputation variables
@@ -111,6 +118,7 @@ transformed data{
             n_firearms[i,j] = 0;
         }
         trip_counted[i] = 0;
+        trip_xday[i] = 0;
     }
     // loop over rows and process trip information
     for ( i in 1:N ) {
@@ -123,12 +131,14 @@ transformed data{
         k = n_foragers[j];
         forager_ids[j,k] = hunter_id[i];
         forager_age[j,k] = age[i];
+        trip_forager_female[j,k] = forager_female[i];
         // if uniform age imputation, store forager age as midpoint + trip year offset
         if ( age_impute_table[hunter_id[i],1]==2 )
             forager_age[j,k] = (age[i] + trip_year_offset[i]);
         trip_harvests[j,k] = harvest[i];
         trip_pooled[j] = pooled[i];
         trip_hours[j] = hours[i];    // should already be standardized to mean 1
+        trip_xday[j] = ( 1 - day_trip[i] );
         if ( trip_hours[j] < 0 && hours_miss_idx[j]==0 ) {
             // missing trip duration
             N_hours_missing = N_hours_missing + 1;
@@ -157,6 +167,8 @@ transformed data{
         }
     }//i over rows
     if ( N_hours_missing==0 ) N_hours_missing = 1;
+    print("Number of trip durations to impute: ",N_hours_missing);
+    print("Number of ages to impute: ",N_ages_impute);
 }
 parameters{
     // forager life history parameters
@@ -199,6 +211,11 @@ parameters{
     real b_firearms[2,N_societies];
     real se_dogs[2,N_societies];
     real se_firearms[2,N_societies];
+
+    // need pooling for xday parameters, on account of some societies having no variation
+    vector[2] b_xday[N_societies];     // trip exceeded a day (not day_trip==1)
+    vector<lower=0>[2] sigma_xday;
+    corr_matrix[2] Rho_xday;
 
     // imputation
     // trip durations
@@ -253,6 +270,11 @@ model{
         }
     }//s
     hscale ~ exponential(1);
+
+    // xday parameters
+    b_xday ~ multi_normal( zeros2 , quad_form_diag(Rho_xday,sigma_xday) );
+    sigma_xday ~ exponential(1);
+    Rho_xday ~ lkj_corr(2);
 
     // age imputation
     for ( i in 1:N_hunters ) {
@@ -319,14 +341,16 @@ model{
                             af[3,trip_soc_id[i]]*(n_foragers[i]-1) + 
                             af[4,trip_soc_id[i]]*n_assistants[i,1] + 
                             b_dogs[1,trip_soc_id[i]]*n_dogs[i,1] +
-                            b_firearms[1,trip_soc_id[i]]*n_firearms[i,1]
+                            b_firearms[1,trip_soc_id[i]]*n_firearms[i,1] +
+                            b_xday[trip_soc_id[i],1]*trip_xday[i]
                         ) *
                         exp(trip_duration_merge[i])^b_hours[1,trip_soc_id[i]];
             lm_h[i] = exp( ah[1,trip_soc_id[i]] + 
                             ah[3,trip_soc_id[i]]*(n_foragers[i]-1) + 
                             ah[4,trip_soc_id[i]]*n_assistants[i,1] +
                             b_dogs[2,trip_soc_id[i]]*n_dogs[i,1] +
-                            b_firearms[2,trip_soc_id[i]]*n_firearms[i,1]
+                            b_firearms[2,trip_soc_id[i]]*n_firearms[i,1] +
+                            b_xday[trip_soc_id[i],2]*trip_xday[i]
                         )*
                         exp(trip_duration_merge[i])^b_hours[2,trip_soc_id[i]];
             sefx = exp( sef[trip_soc_id[i]] + 
@@ -371,14 +395,16 @@ model{
                                 af[2,trip_soc_id[i]]*(n_foragers[i]-1) + 
                                 af[4,trip_soc_id[i]]*n_assistants[i,j] +
                                 b_dogs[1,trip_soc_id[i]]*n_dogs[i,j] +
-                                b_firearms[1,trip_soc_id[i]]*n_firearms[i,j]
+                                b_firearms[1,trip_soc_id[i]]*n_firearms[i,j] +
+                                b_xday[trip_soc_id[i],1]*trip_xday[i]
                             )*
                             exp(trip_duration_merge[i])^b_hours[1,trip_soc_id[i]];
                 lm_h[i] = exp( ah[1,trip_soc_id[i]] + 
                                 ah[2,trip_soc_id[i]]*(n_foragers[i]-1) + 
                                 ah[4,trip_soc_id[i]]*n_assistants[i,j] +
                                 b_dogs[2,trip_soc_id[i]]*n_dogs[i,j] +
-                                b_firearms[2,trip_soc_id[i]]*n_firearms[i,j]
+                                b_firearms[2,trip_soc_id[i]]*n_firearms[i,j] +
+                                b_xday[trip_soc_id[i],1]*trip_xday[i]
                             )*
                             exp(trip_duration_merge[i])^b_hours[2,trip_soc_id[i]];
                 sefx = exp( sef[trip_soc_id[i]] + 

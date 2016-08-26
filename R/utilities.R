@@ -301,6 +301,10 @@ prep_data <- function( dat , debug=FALSE ) {
     dat$hstd <- hstd
     dat$duration_std <- duration_std
 
+    # single-day indicator variable
+    # for now, set missing to zero
+    dat$day_trip <- ifelse( is.na(dat$day_trip) , 1 , dat$day_trip )
+
     # check for empty dogs and gun columns
     if ( is.null(dat$dogs) ) dat$dogs <- 0
     if ( is.null(dat$gun) ) dat$gun <- 0
@@ -311,8 +315,10 @@ prep_data <- function( dat , debug=FALSE ) {
         N_hunters = Total_foragers,
         N_societies = N_soc,
         hunter_id = dat$forager_id,
+        forager_female = ifelse( dat$sex=="F" , 1 , 0 ),
         soc_id = dat$society_id,
         hours = na_to_x( dat$duration_std , -1 ), # -1 is mark for imputation in Stan code
+        day_trip = dat$day_trip,
         harvest = hstd, #dat$harvest,
         age_interval = ifelse(dat$age_type=="Uniform",1,0)*0,
         age = age_obs,

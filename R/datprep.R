@@ -113,7 +113,10 @@ datprepper <- function( file , objectname , save=TRUE , path="data_rda/" , debug
 
     # Denotes whether hunters spend an overnight away
     # from primary residence or camp.
-    d$day_trip <- yn2bin(d$Single.day)
+    if ( is.numeric(d$Single.day) )
+        d$day_trip <- (d$Single.day)
+    else
+        d$day_trip <- yn2bin(d$Single.day)
 
     # dogs variable to denote presence of dogs
     d$dogs <- yn2bin(d$Dogs)

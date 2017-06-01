@@ -167,8 +167,8 @@ transformed data{
         }
     }//i over rows
     if ( N_hours_missing==0 ) N_hours_missing = 1;
-    print("Number of trip durations to impute: ",N_hours_missing);
-    print("Number of ages to impute: ",N_ages_impute);
+    print('Number of trip durations to impute: ',N_hours_missing);
+    print('Number of ages to impute: ',N_ages_impute);
 }
 parameters{
     // forager life history parameters

@@ -195,7 +195,7 @@ make_joint <- function( data_sets , ... ) {
 }
 
 # preps joined data sets so ready to feed into Stan model
-prep_data <- function( dat , debug=FALSE ) {
+prep_data <- function( dat , debug=FALSE , dogs_miss=0 ) {
 
     N_soc <- length(unique(dat$society_id)) 
 
@@ -210,12 +210,33 @@ prep_data <- function( dat , debug=FALSE ) {
 
     # find NA dogs
     if ( !is.null(dat$dogs) ) {
-        idx <- which( is.na(dat$dogs) )
-        if ( length(idx)>0 ) {
-            message(concat("Found ",length(idx), " NA dogs values:"))
-            #print(data.frame(idx,society=dat$society[idx],forager=dat$forager_id[idx]))
-            message("Marking these as dogs==0.")
-            dat$dogs[idx] <- rep(0,length(idx))
+        if ( dogs_miss==0 ) {
+            # just replace all NA with 0, as if dogs absent
+            idx <- which( is.na(dat$dogs) )
+            if ( length(idx)>0 ) {
+                message(concat("Found ",length(idx), " NA dogs values:"))
+                #print(data.frame(idx,society=dat$society[idx],forager=dat$forager_id[idx]))
+                message("Marking these as dogs==0.")
+                dat$dogs[idx] <- rep(0,length(idx))
+            }
+        }
+        if ( dogs_miss!=0 ) {
+            # mark as missing with -1, but only if site has some non-NA values
+            for ( i in 1:N_soc ) {
+                # fetch dogs in society i
+                dogsi <- dat$dogs[dat$society_id==i]
+                idx <- which( is.na(dat$dogs) & dat$society_id==i )
+                if ( any(is.na(dogsi)) ) {
+                    if ( all(is.na(dogsi)) ) {
+                        # all NA, so just set all to zero
+                        # if all missing, nothing to gain by marginalizing
+                        dat$dogs[idx] <- rep(0,length(idx))
+                    } else {
+                        # replace NAs with dogs_miss
+                        dat$dogs[idx] <- rep(dogs_miss,length(idx))
+                    }
+                }
+            }#i
         }
     }
 

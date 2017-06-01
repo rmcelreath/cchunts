@@ -1,12 +1,13 @@
 # common functions for posterior predictions
+# added 'raw' argument for returning only skill curves (no production parameters)
 
-cch_predict <- function( post , data , func , verbose=FALSE , logh=TRUE , ... ) {
+cch_predict <- function( post , data , func , verbose=FALSE , logh=TRUE , raw=FALSE , ... ) {
     d <- as.data.frame(data)
     n <- nrow(d)
     # fill in necessary but missing variables
     if ( is.null(d$soc_id) ) {
         d$soc_id <- 1
-        if ( verbose==TRUE ) message("No soc_id in data. Using '1'.")
+        if ( verbose==TRUE ) message("No soc_id in data. Using averages [lifehistmeans].")
     }
     fhid <- 1 # flag to use hunter id
     if ( is.null(d$hunter_id) ) {
@@ -31,8 +32,12 @@ cch_predict <- function( post , data , func , verbose=FALSE , logh=TRUE , ... ) 
     # detect non-zero intercept in skill functions
     flag_nz <- FALSE
     if ( dim(post$lifehistmeans)[2]==4 ) {
-        flag_nz <- TRUE
+        #flag_nz <- TRUE
     }
+
+    result <- list()
+
+    if ( raw==FALSE ) {
 
     # predict trip failures
     p_f <- sapply( 1:n, 
@@ -128,13 +133,42 @@ cch_predict <- function( post , data , func , verbose=FALSE , logh=TRUE , ... ) 
             }
             return(ph)
         })
-    # result
-    result <- list( failure=p_f , harvest=p_h )
-    if ( !missing(func) ) {
-        r2 <- result
-        for ( i in 1:2 ) r2[[i]] <- apply(r2[[i]],2,func,...)
-        result <- r2
+
+        # result
+        result <- list( failure=p_f , harvest=p_h )
+        if ( !missing(func) ) {
+            r2 <- result
+            for ( i in 1:2 ) r2[[i]] <- apply(r2[[i]],2,func,...)
+            result <- r2
+        }
+
+    } else {
+
+        # RAW
+        SKILLQ <- sapply( 1:n,
+        function(i) {
+            x <- d$age[i]
+            j <- d$soc_id[i]
+            h <- d$hours[i]
+            hid <- d$hunter_id[i]
+                ph <- skill(x,
+                        (exp(post$lifehistmeans[,1] + post$vs[,j,1] + post$vh[,hid,1]*fhid)), #k
+                        (exp(post$lifehistmeans[,2] + post$vs[,j,2] + post$vh[,hid,2]*fhid)), #m
+                        (exp(post$lifehistmeans[,3] + post$vs[,j,3])) #b
+                    )
+            return(ph)
+        })
+
+        # result
+        result <- list( skill=SKILLQ )
+        if ( !missing(func) ) {
+            r2 <- result
+            for ( i in 1:2 ) r2[[i]] <- apply(r2[[i]],2,func,...)
+            result <- r2
+        }
+
     }
+    
     return(result)
 }
 

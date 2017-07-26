@@ -1,40 +1,1 @@
-"Site.number";"Map.label";"Researcher";"Group";"CODE";"Location";"Latitude";"Longitude"
-37;1;"Winterhalder";"Cree";"CRE";"Canada";53.403671;-91.782782
-21;2;"Pacheco";"Maya";"MYA";"Belize";16.50733;-88.963905
-15;3;"Koster";"Mayangna";"MYN";"Nicaragua";14.513652;-85.002122
-26;4;"Siren";"Quichua";"QUI";"Ecuador";-1.736305;-77.485235
-8;5;"Franzen";"Waorani";"WAO";"Ecuador";-1.100651;-75.807101
-2;6;"Beckerman";"Bari";"BAR";"Venezuela";9.674323;-72.944021
-23;7;"Ready";"Inuit";"INU";"Canada";61.598282;-71.955938
-38;8;"Yu et al";"Matsigenka";"MTS";"Peru";-11.764391;-71.769424
-1;9;"Alvard";"Piro";"PIR";"Peru";-12.29753;-70.919931
-29;10;"Van Vliet et al";"Colonos, caboclos, and indigenous";"CLB";"Colombia and Brazil";-4.165274;-69.940115
-16;11;"Kramer and Greaves";"Pume";"PME";"Venezuela";7.241235;-68.534429
-7;12;"Fernandez_Llamazares";"Tsimane";"TS1";"Bolivia";-14.84034;-66.756054
-24;13;"Reyes-Garcia and Fernandez-Llamazeras";"Tsimane";"TS2";"Bolivia";-14.840343;-66.756051
-27;14;"Trumble and Gurven";"Tsimane";"TS3";"Bolivia";-13.024267;-65.115279
-14;15;"Hill and Kintigh";"Ache";"ACH";"Paraguay";-24.128724;-55.496111
-4;16;"Coad";"Gabonese";"GB1";"Gabon";-2.248284;11.527668
-28;17;"Van Vliet et al";"Gabonese";"GB2";"Gabon";0.567293;12.867451
-31;18;"Van Vliet et al (3 sites)";"Gabonese";"GB3";"Ovan, Gabon";0.85;12.95
-32;19;"Van Vliet et al (3 sites)";"Congolese";"CN1";"Maduda, Democratic Republic of the Congo";-4.90328;13.10758
-30;20;"Van Vliet et al (3 sites)";"Gabonese";"GB4";"Djoutou, Gabon";-1.676101;13.298096
-9;21;"Gallois";"Baka";"BK1";"Cameroon";3.157669;13.61975
-5;22;"Duda";"Baka";"BK2";"Cameroon";3.119432;14.076825
-34;23;"Van Vliet et al (3 sites)";"Congolese";"CN2";"Ingolo, Congo";-3.00887;14.194336
-33;24;"Van Vliet et al (3 sites)";"Congolese";"CN3";"Liouesso, Congo";1.021674;15.79834
-17;25;"Lupo and Schmitt";"Bofi and Aka";"BFA";"Central African Republic";3.762144;17.070437
-35;26;"Van Vliet et al (3 sites)";"Congolese";"CN4";"Baego, Democratic Republic of the Congo";0.659165;25.620117
-18;27;"Marks";"Valley Bisa";"BIS";"Zambia";-13.345289;31.675481
-20;28;"Nielsen";"Wahehe";"HEH";"Tanzania";-7.712927;36.477699
-39;29;"Ziker";"Dolgon";"DLG";"Siberia";69.582574;88.217036
-36;30;"Venkataraman";"Batek";"BTK";"Malaysia";4.950947708;102.4128835
-10;31;"Gueze";"Punan";"PN1";"Indonesia";3.58924;116.62238
-19;32;"Napitupulu";"Punan";"PN2";"Indonesia";3.589244;116.622381
-11;33;"Headland";"Agta";"AGT";"Philippines";16.228097;122.151075
-3;34;"Bleige Bird, Bird, and Codding";"Martu";"MRT";"Australia";-22.044239;123.169045
-6;35;"Ellen";"Nuaulu";"NUA";"Indonesia";-3.11915;129.789731
-22;36;"Pangau Adam et al";"Nimboran";"NIM";"New Guinea";-2.87587;140.619998
-13;37;"Healey";"Nen";"NEN";"Papua New Guinea";-8.62973;142.05052
-12;38;"Healey";"Maring";"MAR";"Papua New Guinea";-5.053241;143.318152
-25;39;"Sillitoe";"Wola";"WOL";"Papua New Guinea";-6.179946;143.629138
+Site.number;Map.label;Researcher;Group;CODE;Location;Latitude;Longitude38;1;Winterhalder;Cree;CRE;Canada;53.403671;-91.78278221;2;Pacheco;Maya;MYA;Belize;16.50733;-88.96390515;3;Koster;Mayangna;MYN;Nicaragua;14.513652;-85.00212227;4;Siren;Quichua;QUI;Ecuador;-1.736305;-77.48523525;5;Ross;Ember Chami;ECH;Colombia;5.352836;-76.1317388;6;Franzen;Waorani;WAO;Ecuador;-1.100651;-75.8071012;7;Beckerman;Bari;BAR;Venezuela;9.674323;-72.94402123;8;Ready;Inuit;INU;Canada;61.598282;-71.95593839;9;Yu et al;Matsigenka;MTS;Peru;-11.764391;-71.7694241;10;Alvard;Piro;PIR;Peru;-12.29753;-70.91993130;11;Van Vliet et al;Colonos, caboclos, and indigenous;CLB;Colombia and Brazil;-4.165274;-69.94011516;12;Kramer and Greaves;Pume;PME;Venezuela;7.241235;-68.5344297;13;Fernandez_Llamazares;Tsimane;TS1;Bolivia;-14.84034;-66.75605424;14;Reyes-Garcia and Fernandez-Llamazeras;Tsimane;TS2;Bolivia;-14.840343;-66.75605128;15;Trumble and Gurven;Tsimane;TS3;Bolivia;-13.024267;-65.11527914;16;Hill and Kintigh;Ache;ACH;Paraguay;-24.128724;-55.4961114;17;Coad;Gabonese;GB1;Gabon;-2.248284;11.52766829;18;Van Vliet et al;Gabonese;GB2;Gabon;0.567293;12.86745132;19;Van Vliet et al (3 sites);Gabonese;GB3;Ovan, Gabon;0.85;12.9533;20;Van Vliet et al (3 sites);Congolese;CN1;Maduda, Democratic Republic of the Congo;-4.90328;13.1075831;21;Van Vliet et al (3 sites);Gabonese;GB4;Djoutou, Gabon;-1.676101;13.2980969;22;Gallois;Baka;BK1;Cameroon;3.157669;13.619755;23;Duda;Baka;BK2;Cameroon;3.119432;14.07682535;24;Van Vliet et al (3 sites);Congolese;CN2;Ingolo, Congo;-3.00887;14.19433634;25;Van Vliet et al (3 sites);Congolese;CN3;Liouesso, Congo;1.021674;15.7983417;26;Lupo and Schmitt;Bofi and Aka;BFA;Central African Republic;3.762144;17.07043736;27;Van Vliet et al (3 sites);Congolese;CN4;Baego, Democratic Republic of the Congo;0.659165;25.62011718;28;Marks;Valley Bisa;BIS;Zambia;-13.345289;31.67548120;29;Nielsen;Wahehe;HEH;Tanzania;-7.712927;36.47769940;30;Ziker;Dolgon;DLG;Siberia;69.582574;88.21703637;31;Venkataraman;Batek;BTK;Malaysia;4.950947708;102.412883510;32;Gueze;Punan;PN1;Indonesia;3.58924;116.6223819;33;Napitupulu;Punan;PN2;Indonesia;3.589244;116.62238111;34;Headland;Agta;AGT;Philippines;16.228097;122.1510753;35;Bleige Bird, Bird, and Codding;Martu;MRT;Australia;-22.044239;123.1690456;36;Ellen;Nuaulu;NUA;Indonesia;-3.11915;129.78973122;37;Pangau Adam et al;Nimboran;NIM;New Guinea;-2.87587;140.61999813;38;Healey;Nen;NEN;Papua New Guinea;-8.62973;142.0505212;39;Healey;Maring;MAR;Papua New Guinea;-5.053241;143.31815226;40;Sillitoe;Wola;WOL;Papua New Guinea;-6.179946;143.629138

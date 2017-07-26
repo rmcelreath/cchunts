@@ -11,7 +11,7 @@ checkNA <- function(x) {
 }
 
 na_to_x <- function(x,y=0) ifelse(is.na(x),y,x)
-skill <- function(x,k,m,b) exp(-m*x)*(1-exp(-k*x))^b
+skill <- function(x,k,m,b,a=1) a*( exp(-m*x)*(1-exp(-k*x))^b )
 
 # skill function with non-zero intercept 'a'
 skillnz <- function(x,k,m,b,a=0) {
@@ -69,7 +69,8 @@ cchunts_data_sets <- c(
 'Venkataraman_et_al',
 'Winterhalder',
 'Yu_et_al',
-'Ziker'
+'Ziker',
+'Ross' # added most recently
 )
 
 do_counts <- function( data_sets , ... ) {

@@ -210,7 +210,7 @@ show_foragers <- function( sim , cols=c(rangi2,"red","black","green") ) {
 sim_multi <- function( N_soc=2 , N=30 , N_years=10 , N_days=20 , N_foragers=1 ,
     a , coop=c(0,0,-0.2,0.5,0,1) , prob_drop_fail=0 , prob_pool=0 , prob_assistant=0,
     Mu_soc=c(log(0.02),log(0.04),2) , sigma_soc=c(0.05,0.05,0.2) , Rho_soc=diag(3) ,
-    sigma_i=c(0.1,0.2) , rho_km_i=0.3 ,
+    sigma_i=c(0.1,0.2) , rho_km_i=0.3 , new_names=TRUE , 
     ... ) {
 
     dat_all <- list()
@@ -272,6 +272,32 @@ sim_multi <- function( N_soc=2 , N=30 , N_years=10 , N_days=20 , N_foragers=1 ,
     pars_list <- list()
     for ( s in 1:N_soc ) pars_list[[s]] <- attr(dat_all[[s]],"pars")
     attr(dat,"pars") <- pars_list
+
+    if ( new_names==TRUE ) {
+        # convert variable names so compatible with final Stan model code
+        # (same model used for *real* data)
+        datnew <- list()
+        datnew$trip_id <- dat$trip_id
+        datnew$trip_duration <- dat$trip_duration
+        datnew$day_trip <- ifelse( dat$trip_duration > 24 , 0 , 1 )
+        datnew$pooled <- dat$pooled
+        datnew$harvest <- dat$harvest
+        datnew$forager_id <- dat$forager_id
+        datnew$age_type <- ifelse( dat$age != dat$age_obs , "Uncertain" , "Exact" )
+        datnew$age_dist_1 <- dat$age_obs
+        datnew$age_dist_2 <- dat$age_obs * 0 + 2
+        datnew$dogs <- dat$trip * 0
+        datnew$gun <- dat$trip * 0
+        datnew$trip_year <- dat$year
+        datnew$society_id <- dat$society_id
+        datnew$a_1_id <- dat$A1
+        datnew$a_2_id <- dat$A2
+        datnew$a_3_id <- dat$A3
+        datnew$a_4_id <- dat$A4
+        datnew$sex <- rep("M",length(dat$A1))
+        attr(datnew,"pars") <- pars_list
+        dat <- datnew
+    }
 
     return(dat)
 

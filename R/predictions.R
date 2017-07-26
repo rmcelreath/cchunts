@@ -66,12 +66,18 @@ cch_predict <- function( post , data , func , verbose=FALSE , logh=TRUE , raw=FA
                 # skill elasticity model, so pull samples out
                 skill_elasticity <- exp(post$sef[,j])
             }
+            aval <- 1
+            if (dim(post$lifehistmeans)[2]==7) {
+                # model with a factor on skill to adjust maximum
+                aval <- exp( 0*(post$lifehistmeans[,7] + post$vs[,j,7]) + post$vh[,hid,3]*fhid )
+            }
             if ( flag_nz==FALSE ) {
                 pf <- prob_fail(
                     skill(x, #age (standardized to 80 = 1)
                         (exp(post$lifehistmeans[,1] + post$vs[,j,1] + post$vh[,hid,1]*fhid)), #k
                         (exp(post$lifehistmeans[,2] + post$vs[,j,2] + post$vh[,hid,2]*fhid)), #m
-                        (exp(post$lifehistmeans[,3] + post$vs[,j,3])))^skill_elasticity, #b
+                        (exp(post$lifehistmeans[,3] + post$vs[,j,3])), #b
+                        a=aval )^skill_elasticity, 
                     exp(all_af) * labor_af #intercept
                 )
             } else {
@@ -115,12 +121,18 @@ cch_predict <- function( post , data , func , verbose=FALSE , logh=TRUE , raw=FA
                 # skill elasticity model, so pull samples out
                 skill_elasticity <- exp(post$seh[,j])
             }
+            aval <- 1
+            if (dim(post$lifehistmeans)[2]==7) {
+                # model with a factor on skill to adjust maximum
+                aval <- exp( 0*(post$lifehistmeans[,7] + post$vs[,j,7]) + post$vh[,hid,3]*fhid )
+            }
             if ( flag_nz==FALSE ) {
                 ph <- exp(all_ah)*labor_ah* #intercept
                     skill(x,
                         (exp(post$lifehistmeans[,1] + post$vs[,j,1] + post$vh[,hid,1]*fhid)), #k
                         (exp(post$lifehistmeans[,2] + post$vs[,j,2] + post$vh[,hid,2]*fhid)), #m
-                        (exp(post$lifehistmeans[,3] + post$vs[,j,3])) #b
+                        (exp(post$lifehistmeans[,3] + post$vs[,j,3])) , #b
+                        a=aval
                     )^skill_elasticity
             } else {
                 ph <- exp(all_ah)*labor_ah* #intercept
@@ -151,11 +163,17 @@ cch_predict <- function( post , data , func , verbose=FALSE , logh=TRUE , raw=FA
             j <- d$soc_id[i]
             h <- d$hours[i]
             hid <- d$hunter_id[i]
-                ph <- skill(x,
-                        (exp(post$lifehistmeans[,1] + post$vs[,j,1] + post$vh[,hid,1]*fhid)), #k
-                        (exp(post$lifehistmeans[,2] + post$vs[,j,2] + post$vh[,hid,2]*fhid)), #m
-                        (exp(post$lifehistmeans[,3] + post$vs[,j,3])) #b
-                    )
+            aval <- 1
+            if (dim(post$lifehistmeans)[2]==7) {
+                # model with a factor on skill to adjust maximum
+                aval <- exp( 0*(post$lifehistmeans[,7] + post$vs[,j,7]) + post$vh[,hid,3]*fhid )
+            }
+            ph <- skill(x,
+                    (exp(post$lifehistmeans[,1] + post$vs[,j,1] + post$vh[,hid,1]*fhid)), #k
+                    (exp(post$lifehistmeans[,2] + post$vs[,j,2] + post$vh[,hid,2]*fhid)), #m
+                    (exp(post$lifehistmeans[,3] + post$vs[,j,3])), #b
+                    a=aval
+                )
             return(ph)
         })
 

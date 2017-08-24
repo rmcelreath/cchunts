@@ -1,8 +1,8 @@
 Package: cchunts
 Type: Package
 Title: Cross-Cultural Foraging Life History Data and Analysis
-Version: 0.8.6
-Date: 2017-07-26
+Version: 0.9.0
+Date: 2017-08-24
 Author: Richard McElreath
 Maintainer: Richard McElreath <richard_mcelreath@eva.mpg.de>
 Description: Data sets and common functions for cross-cultural foraging project

@@ -32,8 +32,8 @@ See also ``?sim_multi``.
 
 ## Data analysis
 
-To repeat the data analysis from the paper, see the examples at:
+To repeat the data analysis from the paper, see the example at:
 ```
-?run_cchunt_model
+?cchmodel_run
 ```
 

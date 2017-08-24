@@ -229,7 +229,7 @@ cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,lengt
     else
         sn <- main
     if ( legend==TRUE ) {
-        mtext( concat(0," ","---") , adj=0 )
+        mtext( concat(0," ","--KEY--") , adj=0 )
         mtext( concat("ids (obs)") , adj=1 , cex=0.8 )
     } else {
         mtext( concat(map_id," ",sn) , adj=0 )
@@ -239,7 +239,56 @@ cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,lengt
     return(invisible(list(age_peak=mu,ymax=ymax)))
 }
 
-cch_plot_grid <- function( map_id=1:39 , nrow=7 , ncol=6 , col=cchpal[4] , col2=col.alpha("black",0.5) , fskillonly=TRUE , dosample=FALSE , draw_legend=TRUE , alpha=0.5 , show_points=FALSE , lwd=1.5 , adj_margins=TRUE , part=3 ) {
+cch_plot_avgskill <- function( ymax=0.9 , x_seq=seq(from=0,to=1,length.out=60) , shading=TRUE , postdraws=FALSE , shade_levels=c(0.5,0.6,0.7,0.8,0.9,0.99) , shade_factor=0.8 ) {
+
+    k <- exp( post$lifehistmeans[,1] )
+    m <- exp( post$lifehistmeans[,2] )
+    b <- exp( post$lifehistmeans[,3] )
+    skill_at_x <- sapply( x_seq , function(x) skill(x,k,m,b) )
+
+    plot( x_seq , apply(skill_at_x,2,mean) , xlab="" , xaxt="n" , ylab="" , lwd=1 , col="black" , yaxt="n" , ylim=c(0,ymax) , bty="n" , type="l" )
+    xat <- c(0,18/ra,31/ra,0.5,55/ra,1)
+    xlabs <- xat*ra
+    axis( 1 , at=xat , labels=xlabs , cex=0.8 , padj=-0.1 )
+
+    if ( postdraws==TRUE ) {
+        # uncertainty as draws from posterior
+        for ( i in 1:50 ) {
+            j <- sample( 1:2000 , 1 )
+            curve( skill(x,k[j],m[j],b[j]) , add=TRUE , lwd=1 , col=col.alpha(pal[4],0.3) )
+        }
+        curve( skill(x,mean(k),mean(m),mean(b)) , add=TRUE , lwd=2 )
+    }
+
+    if ( shading==TRUE ) {
+        # uncertainty as shaded region
+        for ( sl in c(0.5,0.6,0.7,0.8,0.9,0.99) ) {
+            shcol <- col.alpha(pal[3], (1-sl)*shade_factor )
+            ci <- apply(skill_at_x,2,PI,prob=sl)
+            shade( ci , x_seq , col=shcol )
+        }
+        lines( x_seq , apply(skill_at_x,2,mean) , lwd=2 )
+    }
+    
+
+    # lines for illustration
+
+    do_line_to <- function(x) {
+        y <- x/ra
+        sk <- skill(y,mean(k),mean(m),mean(b))
+        lines( c(y,y) , c(0,sk) , lty=2 , lwd=0.5 )
+    }
+
+    do_line_to(18)
+    do_line_to(31)
+    do_line_to(55)
+    sk18 <- mean(skill(18/ra,(k),(m),(b)))
+    sk55 <- mean(skill(55/ra,(k),(m),(b)))
+    lines( c(18/ra,55/ra) , c(sk18,sk55) , lty=2 )
+
+}
+
+cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=col.alpha("black",0.5) , fskillonly=TRUE , dosample=FALSE , draw_globalmean=TRUE , draw_legend=TRUE , alpha=0.5 , show_points=FALSE , lwd=1.5 , adj_margins=TRUE , part=3 , skip=0 ) {
 
     if ( adj_margins==TRUE )
         par(mgp = c(1.5, 0.2, 0), mar = c(1.2, 0.5, 1.5, 0.25) + 0.1, tck = -0.02)
@@ -247,6 +296,13 @@ cch_plot_grid <- function( map_id=1:39 , nrow=7 , ncol=6 , col=cchpal[4] , col2=
     par(mfrow=c(nrow,ncol))
 
     fcol <- col
+
+    if ( skip > 0 ) for ( z in 1:skip ) plot.new()
+
+    if ( draw_globalmean==TRUE ) {
+        cch_plot_avgskill()
+        mtext( concat("Global mean") , adj=0 )
+    }
 
     # legend
     if ( draw_legend==TRUE ) {

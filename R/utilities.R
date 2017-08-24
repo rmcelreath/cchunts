@@ -196,7 +196,7 @@ make_joint <- function( data_sets , ... ) {
 }
 
 # preps joined data sets so ready to feed into Stan model
-prep_data <- function( dat , debug=FALSE , dogs_miss=0 ) {
+prep_data <- function( dat , debug=FALSE , dogs_miss=0 , guns_miss=0 ) {
 
     N_soc <- length(unique(dat$society_id)) 
 
@@ -235,6 +235,38 @@ prep_data <- function( dat , debug=FALSE , dogs_miss=0 ) {
                     } else {
                         # replace NAs with dogs_miss
                         dat$dogs[idx] <- rep(dogs_miss,length(idx))
+                    }
+                }
+            }#i
+        }
+    }
+
+    # find NA guns
+    if ( !is.null(dat$gun) ) {
+        if ( guns_miss==0 ) {
+            # just replace all NA with 0, as if guns absent
+            idx <- which( is.na(dat$gun) )
+            if ( length(idx)>0 ) {
+                message(concat("Found ",length(idx), " NA firearms values:"))
+                #print(data.frame(idx,society=dat$society[idx],forager=dat$forager_id[idx]))
+                message("Marking these as 0.")
+                dat$gun[idx] <- rep(0,length(idx))
+            }
+        }
+        if ( guns_miss!=0 ) {
+            # mark as missing with -1, but only if site has some non-NA values
+            for ( i in 1:N_soc ) {
+                # fetch guns in society i
+                gunsi <- dat$gun[dat$society_id==i]
+                idx <- which( is.na(dat$gun) & dat$society_id==i )
+                if ( any(is.na(gunsi)) ) {
+                    if ( all(is.na(gunsi)) ) {
+                        # all NA, so just set all to zero
+                        # if all missing, nothing to gain by marginalizing
+                        dat$gun[idx] <- rep(0,length(idx))
+                    } else {
+                        # replace NAs with dogs_miss
+                        dat$gun[idx] <- rep(guns_miss,length(idx))
                     }
                 }
             }#i

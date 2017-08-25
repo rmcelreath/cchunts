@@ -44,7 +44,7 @@ A list suitable for a Stan model:
 \item{ firearms }{ Idicator of use of firearms on trip }
 }
 \references{}
-\seealso{ \link{\code{make_joint}}, \link{\code{trans_trips}} }
+\seealso{ \code{make_joint}, \code{trans_trips} }
 \examples{
 dat <- make_joint()
 dat_list <- prep_data( dat , dogs_miss=-1 , guns_miss=-1 )

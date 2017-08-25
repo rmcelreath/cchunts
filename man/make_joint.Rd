@@ -49,7 +49,7 @@ A data frame in which each row is a returned harvest and containing the columns:
 \item{ forager_id_soc }{ Index of forager within society (not unique across societies }
 }
 \references{}
-\seealso{ \link{\code{prep_data}}, \link{\code{trans_trips}} }
+\seealso{ \code{prep_data}, \code{trans_trips} }
 \examples{
 some_data <- make_joint(c("Koster","Trumble_Gurven"))
 

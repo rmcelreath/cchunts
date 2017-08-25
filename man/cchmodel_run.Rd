@@ -31,7 +31,7 @@ cchmodel_run( model_code=cchmodel_full , sites=cchunts_data_sets , dogs_miss=-1 
 When successful, an object of class \code{stanfit}.
 }
 \references{}
-\seealso{ \link{\code{prep_data}}, \link{\code{make_joint}} }
+\seealso{ \code{prep_data}, \code{make_joint} }
 \examples{
 
 # test compilation and sampling 

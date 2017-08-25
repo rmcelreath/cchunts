@@ -46,7 +46,7 @@ A data frame in which each row is a returned harvest and containing the columns:
 
 }
 \references{}
-\seealso{ \link{\code{sim_multi}} }
+\seealso{ \code{sim_multi} }
 \examples{
 
 

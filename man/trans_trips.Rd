@@ -18,7 +18,7 @@ trans_trips( d )
 \value{
 }
 \references{}
-\seealso{ \link{\code{make_joint}}, \link{\code{prep_data}} }
+\seealso{ \code{make_joint}, \code{prep_data} }
 \examples{
 dat <- make_joint()
 dat_list <- prep_data( dat , dogs_miss=-1 , guns_miss=-1 )

@@ -49,6 +49,8 @@ A data frame in which each row is a returned harvest and containing the columns:
 \seealso{ \code{sim_multi} }
 \examples{
 
+dat <- sim_foragers( N_foragers=1 , prob_drop_fail=0 , prob_pool=0 , prob_assistant=0.5 , coop=c(0,0,0,0,0,1) , a=c(3,log(10),0.5) )
+show_foragers(dat)
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

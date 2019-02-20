@@ -1,5 +1,5 @@
 # converts csv 
-datprepper <- function( file , objectname , save=TRUE , path="data_rda/" , debug=FALSE ) {
+datprepper <- function( file , objectname , save=TRUE , path="data_rda/" , redact=TRUE , debug=FALSE ) {
 
     # file e.g.: "data/Alvard.csv"
     # objectname e.g.: "Alvard" --- is what data() will load it as
@@ -11,10 +11,18 @@ datprepper <- function( file , objectname , save=TRUE , path="data_rda/" , debug
     d <- read.csv( file , na.strings = c("","NA") , stringsAsFactors=FALSE )
 
     # target columns
+    if ( redact==FALSE )
     resultlist <- c(
         "trip_id", "trip_id_orig", "observed", "trip_date", "julian_date_s", "day_id", 
         "trip_duration", "day_trip", "group_type", "pooled", "harvest", 
         "forager_id", "forager_id_orig", "age_type" , "age_dist_1", "age_dist_2", "sex",
+        "dogs", "gun", "trip_year"
+    )
+    else
+    resultlist <- c(
+        "trip_id", "trip_id_orig", "observed", "trip_date", "julian_date_s", "day_id", 
+        "trip_duration", "day_trip", "group_type", "pooled", "harvest", 
+        "forager_id", "age_type" , "age_dist_1", "age_dist_2", "sex",
         "dogs", "gun", "trip_year"
     )
 
@@ -80,7 +88,9 @@ datprepper <- function( file , objectname , save=TRUE , path="data_rda/" , debug
         d$forager_id <- coerce_index( d$Hunter )
         total_foragers <- max(d$forager_id)
     }
-    d$forager_id_orig <- d$Hunter
+
+    # only keep original hunter name when redact argument FALSE
+    if ( redact==FALSE )d$forager_id_orig <- d$Hunter
 
     #### forager sex
     if ( !is.null(d$Hunter.Sex) )

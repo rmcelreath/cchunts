@@ -1,31 +1,35 @@
 cchmodel_full <- "
+// model_fix.stan dated 20 Feb 2019
+// features two prior_scale data inputs
 data{
-    int N;
-    int N_hunters;
-    int N_societies;
+    int N;                  // number of harvests
+    int N_hunters;          // number of hunters
+    int N_societies;        // number of societies
     int age_interval[N];    // 0/1 indicator for interval age data
     real age[N];            // observed age or (when interval) lower bound
     real age2[N];           // stderr of age or (when interval) upper bound
-    real trip_year_offset[N];
-    real hours[N];
-    int day_trip[N];        // 0/1 indicator of whether trip exceeded a single day
-    real harvest[N];
-    int hunter_id[N];
-    int forager_female[N];
-    int soc_id[N];
-    real ref_age;
-    int N_trips;
-    int trip_id[N];
-    int pooled[N];
-    int A[N,9];             // assistant id matrix. up to 9 assistants per harvest.
-    int dogs[N];
-    int firearms[N];
-    int max_foragers_per_trip;
-    real prior_scale;       // input scale for regularizing priors
+    real trip_year_offset[N];// offset in years of trip from reference year
+                             // used to handle age imputation correctly
+    real hours[N];          // duration of trip
+    int day_trip[N];        // 0/1 indicator if trip not exceeded a single day
+    real harvest[N];        // observed harvest
+    int hunter_id[N];       // unique ID of hunter
+    int forager_female[N];  // indicator of female hunter
+    int soc_id[N];          // unique ID of society
+    real ref_age;           // reference age used for scaling - default 80
+    int N_trips;            // number of trips
+    int trip_id[N];         // unique ID of each trip
+    int pooled[N];          // indicator of pooled harvests
+    int A[N,9];             // assistant id matrix - up to 9 per harvest
+    int dogs[N];            // indicator of dogs present on hunt (or NA -1)
+    int firearms[N];        // indicator of firearms present (or NA -1)
+    int max_foragers_per_trip;// used to prep storage - see transformed data
+    real prior_scale;       // scale for regularizing priors
+    real prior_scale2;      // second prior scale - usually same as first
 }
 transformed data{
     // loop over rows and compute trip information
-    real RHO_PRIOR_REGGER;
+    real RHO_PRIOR_REGGER;  // regularizing scale for correlation matrix
     int n_foragers[N_trips];
     int n_assistants[N_trips,max_foragers_per_trip];
     int n_dogs[N_trips,max_foragers_per_trip];
@@ -39,8 +43,8 @@ transformed data{
     vector[2] zeros2;
     vector[3] zeros3;
     vector[N_trips] trip_hours;
-    vector[N_trips] trip_xday;          // trip exceeded a single day (camping)
-    int forager_soc_id[N_hunters];      // useful for precomputing individual skill parameters
+    vector[N_trips] trip_xday;       // trip exceeded a single day (camping)
+    int forager_soc_id[N_hunters];   // useful for precomputing individual skill parameters
     int trip_counted[N_trips];
     // duration imputation variables
     int N_hours_missing;
@@ -281,14 +285,12 @@ model{
     real mu;
     matrix[2,2] Sigma;
     vector[N_trips] trip_duration_merge;
-    //real prior_scale;
-
-    //prior_scale = 0.5;
     
     // priors
     // society-level life history means --- centered on global means
     // equivalent to:
     //vs ~ multi_normal( lifehistmeans , quad_form_diag(Rho_societies,sigma_societies) );
+    //see transformation in transformed parameters block
     to_vector(zs) ~ normal(0,1);
 
     lifehistmeans[1:2] ~ normal( 1, prior_scale ); // log k,m
@@ -304,12 +306,14 @@ model{
     target += lifehistmeans[4];
     target += lifehistmeans[5];
 
-    sigma_societies ~ normal( 0 , prior_scale );
+    sigma_societies[1:3] ~ normal( 0 , prior_scale2 );
+    sigma_societies[4] ~ normal( 0.5 , prior_scale2 );
+    sigma_societies[5:6] ~ normal( 0 , prior_scale2 );
 
-    dogs_mu ~ beta(2,4); // weighted towards low values to stop mode switching in site 8
+    dogs_mu ~ beta(2,10); // weighted to stop mode switching in site 8
     guns_mu ~ beta(2,4);
 
-    ache_fix_rho ~ normal(0, prior_scale );
+    ache_fix_rho ~ normal( 0, prior_scale );
 
     afbar ~ normal(0, prior_scale );
     ahbar ~ normal(0, prior_scale );
@@ -348,9 +352,6 @@ model{
             if ( age_impute_table[i,1]==1 )
                 age_err[age_impute_idx[i]] ~ 
                         normal( 0 , age_impute_table[i,3] );
-            //else
-                //age_err[age_impute_idx[i]] ~ 
-                //        uniform( 0 , age_impute_table[i,3]-age_impute_table[i,2] );
         }
     }
 
@@ -372,17 +373,12 @@ model{
     
     // prep hunter effects so can re-use
     for ( j in 1:N_hunters ) {
-        if ( forager_soc_id[j]==14 ) {
-            k[j] = exp( lifehistmeans[1] + vs[forager_soc_id[j],1] + vh[j,1] );
-            m[j] = exp( lifehistmeans[2] + vs[forager_soc_id[j],2] + vh[j,2] );
-        } else {
-            k[j] = exp( lifehistmeans[1] + vs[forager_soc_id[j],1] + vh[j,1] );
-            m[j] = exp( lifehistmeans[2] + vs[forager_soc_id[j],2] + vh[j,2] );
-        }
+        k[j] = exp( lifehistmeans[1] + vs[forager_soc_id[j],1] + vh[j,1] );
+        m[j] = exp( lifehistmeans[2] + vs[forager_soc_id[j],2] + vh[j,2] );
     }
     // prep b for each society, so only have to compute once
     for ( s in 1:N_societies ) {
-        b[s] = exp( lifehistmeans[3] + vs[s,3] );     // ensure positive with log link
+        b[s] = exp( lifehistmeans[3] + vs[s,3] ); // ensure positive with log link
     }
     
     // likelihoods
@@ -391,6 +387,10 @@ model{
     // loop over trips and compute likelihoods
     for ( i in 1:N_trips ) {
         real skillj;
+        real sef_stem;
+        real seh_stem;
+        real lh_stem;
+        real lf_stem;
         real sefx;
         real sehx;
         real ai;
@@ -402,6 +402,7 @@ model{
         int xguns;
         int n_foragers_index;
         int coopidx;
+        // prep binary tree for possible combinations of missing values
         int xdogsvec[4];
         int xgunsvec[4];
         xdogsvec[1] = 1;
@@ -412,6 +413,8 @@ model{
         xgunsvec[2] = 0;
         xgunsvec[3] = 1;
         xgunsvec[4] = 0;
+
+        // compute avg skill (when needed)
         avg_skill = 0;
         if ( trip_pooled[i]==1 ) {
             // pooled harvest
@@ -422,18 +425,18 @@ model{
                 hid = forager_ids[i,j];
                 if ( age_impute_idx[hid]==0 ) {
                     // simple case, just fetch observed age
-                    ai = forager_age[i,j]; // from trip variables
+                    ai = forager_age[i,j] /ref_age ; // from trip variables
                 } else {
                     // need some kind of imputation
-                    ai = forager_age[i,j] + age_err[age_impute_idx[hid]];
+                    ai = (forager_age[i,j] + age_err[age_impute_idx[hid]])/ref_age;
                 }
-                ai = ai/ref_age;
+                //ai = ai/ref_age;
 
                 skillj = exp(-m[hid]*ai)*pow(1-exp(-k[hid]*ai),b[trip_soc_id[i]]);
                 avg_skill = avg_skill + skillj;
             }//j
             avg_skill = avg_skill/n_foragers[i] + 0.001;
-            n_foragers_index = 1; // loop over just one forager
+            n_foragers_index = 1; // loop over just *one* forager
             coopidx = 3;
         } else {
             // independent harvests
@@ -442,6 +445,8 @@ model{
         }
 
         for ( j in 1:n_foragers_index ) {
+            // if trip pooled, only one harvest (n_foragers_index==1)
+            // otherwise loops over each harvest and predicts each
 
             if ( trip_pooled[i]==1 ) {
                 skillj = avg_skill;
@@ -449,170 +454,179 @@ model{
                 hid = forager_ids[i,j];
                 if ( age_impute_idx[hid]==0 ) {
                     // simple case, just fetch observed age
-                    ai = forager_age[i,j]; // from trip variables
+                    ai = forager_age[i,j]/ref_age; // from trip variables
                 } else {
                     // need some kind of imputation
-                    ai = forager_age[i,j] + age_err[age_impute_idx[hid]];
+                    ai = (forager_age[i,j] + age_err[age_impute_idx[hid]])/ref_age;
                 }
-                ai = ai/ref_age;
+                //ai = ai/ref_age;
                 skillj = exp(-m[hid]*ai)*pow(1-exp(-k[hid]*ai),b[trip_soc_id[i]]) + 0.001;
             }
 
             // prep common parts of linear models
             // this just removes the dogs and firearms terms
-            // those get added below, depending upon missingness
-            lm_f[i] = exp( af[1,trip_soc_id[i]] + 
+            // they are commented out here
+            // they get added further below, depending upon missingness
+
+            // failures production
+            lf_stem = exp( af[1,trip_soc_id[i]] + 
                                 af[coopidx,trip_soc_id[i]]*(n_foragers[i]-1) + 
-                                af[4,trip_soc_id[i]]*n_assistants[i,1] + 
-                                //b_dogs[1,trip_soc_id[i]]*n_dogs[i,1] +
-                                //b_firearms[1,trip_soc_id[i]]*n_firearms[i,1] +
+                                af[4,trip_soc_id[i]]*n_assistants[i,j] + 
                                 b_xday[trip_soc_id[i],1]*trip_xday[i]
                             ) *
                             exp(trip_duration_merge[i])^b_hours[1,trip_soc_id[i]];
-            lm_h[i] = exp( ah[1,trip_soc_id[i]] + 
+            // harvests production
+            lh_stem = exp( ah[1,trip_soc_id[i]] + 
                                 ah[coopidx,trip_soc_id[i]]*(n_foragers[i]-1) + 
-                                ah[4,trip_soc_id[i]]*n_assistants[i,1] +
-                                //b_dogs[2,trip_soc_id[i]]*n_dogs[i,1] +
-                                //b_firearms[2,trip_soc_id[i]]*n_firearms[i,1] +
+                                ah[4,trip_soc_id[i]]*n_assistants[i,j] +
                                 b_xday[trip_soc_id[i],2]*trip_xday[i]
                             )*
                             exp(trip_duration_merge[i])^b_hours[2,trip_soc_id[i]];
-            sefx = exp( sef[trip_soc_id[i]]  
-                                //se_dogs[1,trip_soc_id[i]]*n_dogs[i,1] +
-                                //se_firearms[1,trip_soc_id[i]]*n_firearms[i,1]
-                            );
-            sehx = exp( seh[trip_soc_id[i]]  
-                                //se_dogs[2,trip_soc_id[i]]*n_dogs[i,1] +
-                                //se_firearms[2,trip_soc_id[i]]*n_firearms[i,1]
-                            );
+            // failures skill elasticity
+            sef_stem = exp( sef[trip_soc_id[i]] );
+            // harvests skill elasticity
+            seh_stem = exp( seh[trip_soc_id[i]] );
 
             // compute linear components of production functions
             // and do target update
-            if ( n_dogs[i,1] != -1 && n_firearms[i,1] != -1 ) {
-                // dogs and guns observed
-                // estimate base rates of dogs and guns
-                n_dogs[i,1] ~ bernoulli(dogs_mu[trip_soc_id[i]]);
-                n_firearms[i,1] ~ bernoulli(guns_mu[trip_soc_id[i]]);
-                // build production functions
-                lm_f[i] = lm_f[i] * exp( b_dogs[1,trip_soc_id[i]]*n_dogs[i,1] +
-                                         b_firearms[1,trip_soc_id[i]]*n_firearms[i,1] );
-                lm_h[i] = lm_h[i] * exp( b_dogs[2,trip_soc_id[i]]*n_dogs[i,1] +
-                                         b_firearms[2,trip_soc_id[i]]*n_firearms[i,1] );
-                sefx = sefx * exp( se_dogs[1,trip_soc_id[i]]*n_dogs[i,1] +
-                                   se_firearms[1,trip_soc_id[i]]*n_firearms[i,1] );
-                sehx = sehx * exp( se_dogs[2,trip_soc_id[i]]*n_dogs[i,1] +
-                                se_firearms[2,trip_soc_id[i]]*n_firearms[i,1] );
+            if ( n_dogs[i,j] != -1 && n_firearms[i,j] != -1 ) {
+                // dogs and guns both observed
+                // use obs values to update base rates of dogs and guns
+                n_dogs[i,j] ~ bernoulli(dogs_mu[trip_soc_id[i]]);
+                n_firearms[i,j] ~ bernoulli(guns_mu[trip_soc_id[i]]);
+                // build production functions with observed values
+                lm_f[i] = lf_stem * exp( b_dogs[1,trip_soc_id[i]]*n_dogs[i,j] +
+                                         b_firearms[1,trip_soc_id[i]]*n_firearms[i,j] );
+                lm_h[i] = lh_stem * exp( b_dogs[2,trip_soc_id[i]]*n_dogs[i,j] +
+                                         b_firearms[2,trip_soc_id[i]]*n_firearms[i,j] );
+                sefx = sef_stem * exp( se_dogs[1,trip_soc_id[i]]*n_dogs[i,j] +
+                                   se_firearms[1,trip_soc_id[i]]*n_firearms[i,j] );
+                sehx = seh_stem * exp( se_dogs[2,trip_soc_id[i]]*n_dogs[i,j] +
+                                se_firearms[2,trip_soc_id[i]]*n_firearms[i,j] );
+                // compute failure probability and harvest mean
                 p = 2*(1 - inv_logit( skillj^sefx * lm_f[i] ));
                 mu = lm_h[i] * skillj^sehx;
-                if ( trip_harvests[i,1]==0 )
-                    //increment_log_prob(bernoulli_log(1,p));
+                if ( trip_harvests[ i , j ]==0 )
+                    // failure
                     1 ~ bernoulli(p);
                 else {
-                    //increment_log_prob(bernoulli_log(0,p) + gamma_log(trip_harvests[i,1],mu/hscale[trip_soc_id[i]],1/hscale[trip_soc_id[i]]));
+                    // observed harvest
                     0 ~ bernoulli(p);
-                    trip_harvests[i,1] ~ gamma(mu/hscale[trip_soc_id[i]],1/hscale[trip_soc_id[i]]);
+                    trip_harvests[ i , j ] ~ gamma( mu/hscale[trip_soc_id[i]] , 
+                                                1/hscale[trip_soc_id[i]] );
                 }
-            } // no dogs/guns missing
-            if ( n_dogs[i,1] == -1 && n_firearms[i,1] != -1 ) {
-                // dogs missing
-                n_firearms[i,1] ~ bernoulli(guns_mu[trip_soc_id[i]]);
+            }
+            // now dogs missing, guns observed
+            if ( n_dogs[i,j] == -1 && n_firearms[i,j] != -1 ) {
+                n_firearms[i,j] ~ bernoulli(guns_mu[trip_soc_id[i]]);
                 // average over missingness
+                // LLterms holds terms to mix over
+                // LLterms[1] is where dogs == 0
+                // LLterms[2] is where dogs == 1
                 for ( nterm in 1:2 ) {
                     xdogs = nterm-1;
-                    lm_f[i] = lm_f[i] * exp( b_dogs[1,trip_soc_id[i]]*xdogs +
-                                             b_firearms[1,trip_soc_id[i]]*n_firearms[i,1] );
-                    lm_h[i] = lm_h[i] * exp( b_dogs[2,trip_soc_id[i]]*xdogs +
-                                             b_firearms[2,trip_soc_id[i]]*n_firearms[i,1] );
-                    sefx = sefx * exp( se_dogs[1,trip_soc_id[i]]*xdogs +
-                                       se_firearms[1,trip_soc_id[i]]*n_firearms[i,1] );
-                    sehx = sehx * exp( se_dogs[2,trip_soc_id[i]]*xdogs +
-                                       se_firearms[2,trip_soc_id[i]]*n_firearms[i,1] );
+                    lm_f[i] = lf_stem * exp( b_dogs[1,trip_soc_id[i]]*xdogs +
+                                             b_firearms[1,trip_soc_id[i]]*n_firearms[i,j] );
+                    lm_h[i] = lh_stem * exp( b_dogs[2,trip_soc_id[i]]*xdogs +
+                                             b_firearms[2,trip_soc_id[i]]*n_firearms[i,j] );
+                    sefx = sef_stem * exp( se_dogs[1,trip_soc_id[i]]*xdogs +
+                                       se_firearms[1,trip_soc_id[i]]*n_firearms[i,j] );
+                    sehx = seh_stem * exp( se_dogs[2,trip_soc_id[i]]*xdogs +
+                                       se_firearms[2,trip_soc_id[i]]*n_firearms[i,j] );
                     p = 2*(1 - inv_logit( skillj^sefx * lm_f[i] ));
-                    mu = lm_h[i] * skillj^sehx;
-                    LLterms[nterm] = 0;
-                    if ( trip_harvests[i,1]==0 ) {
-                        LLterms[nterm] = LLterms[nterm] + log(p);
+                    if ( trip_harvests[i,j]==0 ) {
+                        LLterms[nterm] = log(p);
                     } else {
-                        LLterms[nterm] = LLterms[nterm] + log1m(p);
-                        LLterms[nterm] = LLterms[nterm] + gamma_lpdf( trip_harvests[i,1] | mu/hscale[trip_soc_id[i]] , 1/hscale[trip_soc_id[i]] );
+                        mu = lm_h[i] * skillj^sehx;
+                        LLterms[nterm] = log1m(p) + gamma_lpdf( trip_harvests[i,j] | mu/hscale[trip_soc_id[i]] , 1/hscale[trip_soc_id[i]] );
                     }
                     
-                }//k
+                }// nterm
                 // do the mixture
+                // Pr(dogs==1)*Pr(harvest|dogs==1) + Pr(dogs==0)Pr(harvest|dogs==0)
+                // log_mix here is for numerical stability
                 target += log_mix( dogs_mu[trip_soc_id[i]] , LLterms[2] , LLterms[1] );
-            }// !dogs √firearms
-            if ( n_dogs[i,1] != -1 && n_firearms[i,1] == -1 ) {
-                // dogs observed but firearms missing
-                n_dogs[i,1] ~ bernoulli(dogs_mu[trip_soc_id[i]]);
+            }
+            // now dogs observed but firearms missing
+            if ( n_dogs[i,j] != -1 && n_firearms[i,j] == -1 ) {
+                n_dogs[i,j] ~ bernoulli(dogs_mu[trip_soc_id[i]]);
                 // average over missingness
+                // similar to above, but LLterms now average over missing guns
                 for ( nterm in 1:2 ) {
                     xguns = nterm-1;
-                    lm_f[i] = lm_f[i] * exp( b_dogs[1,trip_soc_id[i]]*n_dogs[i,1] +
+                    lm_f[i] = lf_stem * exp( b_dogs[1,trip_soc_id[i]]*n_dogs[i,j] +
                                              b_firearms[1,trip_soc_id[i]]*xguns );
-                    lm_h[i] = lm_h[i] * exp( b_dogs[2,trip_soc_id[i]]*n_dogs[i,1] +
+                    lm_h[i] = lh_stem * exp( b_dogs[2,trip_soc_id[i]]*n_dogs[i,j] +
                                              b_firearms[2,trip_soc_id[i]]*xguns );
-                    sefx = sefx * exp( se_dogs[1,trip_soc_id[i]]*n_dogs[i,1] +
+                    sefx = sef_stem * exp( se_dogs[1,trip_soc_id[i]]*n_dogs[i,j] +
                                        se_firearms[1,trip_soc_id[i]]*xguns );
-                    sehx = sehx * exp( se_dogs[2,trip_soc_id[i]]*n_dogs[i,1] +
+                    sehx = seh_stem * exp( se_dogs[2,trip_soc_id[i]]*n_dogs[i,j] +
                                        se_firearms[2,trip_soc_id[i]]*xguns );
                     p = 2*(1 - inv_logit( skillj^sefx * lm_f[i] ));
-                    mu = lm_h[i] * skillj^sehx;
-                    LLterms[nterm] = 0;
-                    if ( trip_harvests[i,1]==0 ) {
-                        LLterms[nterm] = LLterms[nterm] + log(p);
+                    
+                    if ( trip_harvests[i,j]==0 ) {
+                        LLterms[nterm] = log(p);
                     } else {
-                        LLterms[nterm] = LLterms[nterm] + log1m(p);
-                        LLterms[nterm] = LLterms[nterm] + gamma_lpdf( trip_harvests[i,1] | mu/hscale[trip_soc_id[i]] , 1/hscale[trip_soc_id[i]] );
+                        mu = lm_h[i] * skillj^sehx;
+                        LLterms[nterm] = log1m(p) + gamma_lpdf( trip_harvests[i,j] | mu/hscale[trip_soc_id[i]] , 1/hscale[trip_soc_id[i]] );
                     }
                     
-                }//k
+                }//nterm
                 // do the mixture
                 target += log_mix( guns_mu[trip_soc_id[i]] , LLterms[2] , LLterms[1] );
-            }// √dogs !firearms
-            if ( n_dogs[i,1] == -1 && n_firearms[i,1] == -1 ) {
-                // miss both dogs and guns
+            }
+            // finally, both dogs and guns missing
+            if ( n_dogs[i,j] == -1 && n_firearms[i,j] == -1 ) {
+                // L4terms holds combinations of possible values of dogs and guns
+                //     dogs guns {probability at site k}
+                // [1] 1    1    dogs_mu[j] * guns_mu[k]
+                // [2] 1    0    dogs_mu[j] * ( 1 - guns_mu[k] )
+                // [3] 0    1    ( 1 - dogs_mu[j] ) * guns_mu[k]
+                // [4] 0    0    ( 1 - dogs_mu[j] ) * ( 1 - guns_mu[k] )
                 for ( nterm in 1:4 ) {
+                    real lphead;
                     xdogs = xdogsvec[nterm];
                     xguns = xgunsvec[nterm];
-                    lm_f[i] = lm_f[i] * exp( b_dogs[1,trip_soc_id[i]]*xdogs +
+                    lm_f[i] = lf_stem * exp( b_dogs[1,trip_soc_id[i]]*xdogs +
                                              b_firearms[1,trip_soc_id[i]]*xguns );
-                    lm_h[i] = lm_h[i] * exp( b_dogs[2,trip_soc_id[i]]*xdogs +
+                    lm_h[i] = lh_stem * exp( b_dogs[2,trip_soc_id[i]]*xdogs +
                                              b_firearms[2,trip_soc_id[i]]*xguns );
-                    sefx = sefx * exp( se_dogs[1,trip_soc_id[i]]*xdogs +
+                    sefx = sef_stem * exp( se_dogs[1,trip_soc_id[i]]*xdogs +
                                        se_firearms[1,trip_soc_id[i]]*xguns );
-                    sehx = sehx * exp( se_dogs[2,trip_soc_id[i]]*xdogs +
+                    sehx = seh_stem * exp( se_dogs[2,trip_soc_id[i]]*xdogs +
                                        se_firearms[2,trip_soc_id[i]]*xguns );
-                    p = 2*(1 - inv_logit( skillj^sefx * lm_f[i] ));
-                    mu = lm_h[i] * skillj^sehx;
-                    LL4terms[nterm] = 0;
-                    if ( trip_harvests[i,1]==0 ) {
-                        LL4terms[nterm] = LL4terms[nterm] + log(p);
-                    } else {
-                        LL4terms[nterm] = LL4terms[nterm] + log1m(p);
-                        LL4terms[nterm] = LL4terms[nterm] + gamma_lpdf( trip_harvests[i,1] | mu/hscale[trip_soc_id[i]] , 1/hscale[trip_soc_id[i]] );
-                    }
+
                     // add leading factor for probability of combination of missingness
-                    if ( xdogs==1 )
-                        LL4terms[nterm] = LL4terms[nterm] + log(dogs_mu[trip_soc_id[i]]);
-                    else
-                        LL4terms[nterm] = LL4terms[nterm] + log1m(dogs_mu[trip_soc_id[i]]);
-                    if ( xguns==1 )
-                        LL4terms[nterm] = LL4terms[nterm] + log(guns_mu[trip_soc_id[i]]);
-                    else
-                        LL4terms[nterm] = LL4terms[nterm] + log1m(guns_mu[trip_soc_id[i]]);
-                }//k
+                    if ( xdogs==1 && xguns==1 )
+                        lphead = log(dogs_mu[trip_soc_id[i]]) + log(guns_mu[trip_soc_id[i]]);
+                    if ( xdogs==1 && xguns==0 )
+                        lphead = log(dogs_mu[trip_soc_id[i]]) + log1m(guns_mu[trip_soc_id[i]]);
+                    if ( xdogs==0 && xguns==1 )
+                        lphead = log1m(dogs_mu[trip_soc_id[i]]) + log(guns_mu[trip_soc_id[i]]);
+                    if ( xdogs==0 && xguns==0 )
+                        lphead = log1m(dogs_mu[trip_soc_id[i]]) + log1m(guns_mu[trip_soc_id[i]]);
+
+                    p = 2*(1 - inv_logit( skillj^sefx * lm_f[i] ));
+                    if ( trip_harvests[i,j]==0 ) {
+                        LL4terms[nterm] = lphead + log(p);
+                    } else {
+                        mu = lm_h[i] * skillj^sehx;
+                        LL4terms[nterm] = lphead + log1m(p) + gamma_lpdf( trip_harvests[i,j] | mu/hscale[trip_soc_id[i]] , 1/hscale[trip_soc_id[i]] );
+                    }
+                    
+                }//nterm
                 // do the mixture
                 target += log_sum_exp( LL4terms );
-            }// miss both dogs and guns
+            }
 
         } //j
     }//i over trips
-}
+}//model
 generated quantities{
     real k[N_hunters];
     real m[N_hunters];
     real b[N_hunters];
-    //matrix[6,6] Rho_societies;
+    //matrix[6,6] Rho_societies; // uncommment to return correlation matrix
     // build individual forager effects
     // useful for posterior predictions
     for ( j in 1:N_hunters ) {
@@ -620,8 +634,7 @@ generated quantities{
         m[j] = exp( lifehistmeans[2] + vs[forager_soc_id[j],2] + vh[j,2] );
         b[j] = exp( lifehistmeans[3] + vs[forager_soc_id[j],3] );
     }
-    // build ordinary correlation matrices from cholesky factors
-    // useful during interpretation
+    // uncomment to return correlation matrix from cholesky factor
     //Rho_societies = L_Rho_societies * L_Rho_societies';
 }
 "
@@ -673,11 +686,14 @@ check_index <- function (x)
         message("At least one gap in consecutive values")
 }
 
-cchmodel_run <- function( model_code=cchmodel_full , sites=cchunts_data_sets , dogs_miss=-1 , guns_miss=-1 , prior_scale=0.5 , n_chains=4 , the_seed=1208 , warmup=500 , iter=1000 , control=list( adapt_delta=0.99 , max_treedepth=13 ) , start , test=FALSE , ... ) {
+cchmodel_run <- function( model_code=cchmodel_full , sites=cchunts_data_sets , simdat , dogs_miss=-1 , guns_miss=-1 , prior_scale=0.5 , prior_scale2=0.5 , n_chains=4 , the_seed=1208 , warmup=500 , iter=1000 , control=list( adapt_delta=0.99 , max_treedepth=13 ) , start , test=FALSE , ... ) {
 
     require(parallel)
 
-    dat <- make_joint(sites)
+    if ( missing(simdat) )
+        dat <- make_joint(sites)
+    else
+        dat <- as.data.frame(simdat)
 
     N_soc <- length(unique(dat$society_id))
     message(concat(N_soc," sites joined."))
@@ -726,6 +742,7 @@ cchmodel_run <- function( model_code=cchmodel_full , sites=cchunts_data_sets , d
     # define scale for many regularizing priors in model
     # 0.5 gives efficient mixing
     dat_list$prior_scale <- prior_scale
+    dat_list$prior_scale2 <- prior_scale2
 
     init <- function() return(start)
     max_cores <- detectCores()

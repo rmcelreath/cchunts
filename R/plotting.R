@@ -124,7 +124,7 @@ cch_plot_forager <- function( post , id , soc_id , data , n_points=100 , new_plo
 cchpal <- c("#DD8D29", "#E2D200", "#46ACC8", "#E58601", "#B40F20")
 
 # function shows skill, success, harvest, expected returns for individual sites
-cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,length.out=50) , h=1 , col=cchpal[4] , col2=col.alpha("black",0.2) , alpha , pts=FALSE , sample_post=FALSE , legend=FALSE , jitter=FALSE  , sw=0.1 , ybuffer=0.2 , skill_only=FALSE , ra=80 , part=3 , main , show_peak=TRUE , ... ) {
+cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,length.out=50) , h=1 , col=cchpal[4] , col2=col.alpha("black",0.2) , alpha , pts=FALSE , sample_post=FALSE , legend=FALSE , jitter=FALSE  , sw=0.1 , ybuffer=0.2 , skill_only=FALSE , ra=80 , part=3 , main , show_peak=TRUE , mean_only=FALSE , mean_ci=0.89 , ... ) {
 
     if ( !missing(alpha) ) col=col.alpha(col,alpha)
 
@@ -150,6 +150,7 @@ cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,lengt
     n <- length(ids)
     if ( sample_post!=FALSE ) n <- sample_post
     p_med <- matrix(NA,nrow=n,ncol=50)
+    p_ci <- c(0,0) # placeholder for compatibility interval of mean
     for ( i in 1:n ) {
         h_use <- h
         if ( jitter==TRUE ) h_use <- h + runif(1,-0.5,2)
@@ -157,7 +158,7 @@ cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,lengt
             if ( sample_post==FALSE )
                 p <- cch_predict( post , data=data.frame(age=x_seq,soc_id=j,hours=h_use,hunter_id=ids[i]) , raw=skill_only )
             else
-                p <- cch_predict( post , data=data.frame(age=x_seq,soc_id=j,hours=h_use) , , raw=skill_only )
+                p <- cch_predict( post , data=data.frame(age=x_seq,soc_id=j,hours=h_use) , raw=skill_only )
             if ( skill_only==FALSE ) {
                 if ( part==3 )
                     Ep <- (1-p$failure) * p$harvest
@@ -170,11 +171,13 @@ cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,lengt
             } else
                 Ep <- p$skill
             p_med[i,] <- apply(Ep,2,mean)
+            if ( mean_only==TRUE )
+                p_ci <- apply(Ep,2,PI,mean_ci)
         } else {
             # skill curves raw
             p_med[i,] <- sapply( x_seq , function(x) exp(-m_est[ids[i]]*x)*(1-exp(-k_est[ids[i]]*x))^b_est[ids[i]] )
         }
-        if (sample_post!=FALSE) {
+        if ( sample_post!=FALSE & mean_only==FALSE ) {
             # instead of average for each forager, show samples from average forager
             p_med[i,] <- Ep[ sample(1:1000,1) ,  ]
         }
@@ -197,6 +200,14 @@ cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,lengt
         lines( x_seq[lowobs] , p_med[i,lowobs] , col=outcol , ... )
         lines( x_seq[upobs] , p_med[i,upobs] , col=outcol , ... )
     }#i
+
+    if ( mean_only==TRUE ) {
+        # draw compatibility interval
+        #print(str(p_ci))
+        shade( p_ci[,inobs] , x_seq[inobs] )
+        shade( p_ci[,lowobs] , x_seq[lowobs] )
+        shade( p_ci[,upobs] , x_seq[upobs] )
+    }
 
     # compute age at peak for average individual
     if ( show_peak==TRUE ) {
@@ -239,16 +250,28 @@ cch_plot_curve <- function( map_id , soc_id , ids=NULL , x=seq(from=0,to=1,lengt
     return(invisible(list(age_peak=mu,ymax=ymax)))
 }
 
-cch_plot_avgskill <- function( ymax=0.9 , x_seq=seq(from=0,to=1,length.out=60) , shading=TRUE , postdraws=FALSE , shade_levels=c(0.5,0.6,0.7,0.8,0.9,0.99) , shade_factor=0.8 ) {
+cch_plot_avgskill <- function( ymax=0.9 , x_seq=seq(from=0,to=1,length.out=60) , shading=TRUE , postdraws=FALSE , shade_levels=c(0.5,0.6,0.7,0.8,0.9,0.99) , shade_factor=0.8 , ra=80 , reflines=TRUE ) {
+
+    pal <- cchpal
 
     k <- exp( post$lifehistmeans[,1] )
     m <- exp( post$lifehistmeans[,2] )
     b <- exp( post$lifehistmeans[,3] )
     skill_at_x <- sapply( x_seq , function(x) skill(x,k,m,b) )
 
-    plot( x_seq , apply(skill_at_x,2,mean) , xlab="" , xaxt="n" , ylab="" , lwd=1 , col="black" , yaxt="n" , ylim=c(0,ymax) , bty="n" , type="l" )
-    xat <- c(0,18/ra,31/ra,0.5,55/ra,1)
-    xlabs <- xat*ra
+    skillmu <- apply(skill_at_x,2,mean)
+    age_max <- which( skillmu==max(skillmu) )
+    age_max <- x_seq[age_max]
+
+    # find older age with same skill as skill at 18
+    sk18 <- mean(skill(18/ra,(k),(m),(b)))
+    f_skill_at_x <- function(x) skill(x,k,m,b)
+    age_match_18 <- optimize( f=function(x) abs(mean(f_skill_at_x(x))-sk18) , interval=c(19/ra,1) )$minimum
+    sk55 <- mean(skill(age_match_18,(k),(m),(b)))
+
+    plot( x_seq , skillmu , xlab="" , xaxt="n" , ylab="" , lwd=1 , col="black" , yaxt="n" , ylim=c(0,ymax) , bty="n" , type="l" )
+    xat <- c( 0 , 18/ra , age_max , age_match_18 , 1 )
+    xlabs <- round(xat*ra,0)
     axis( 1 , at=xat , labels=xlabs , cex=0.8 , padj=-0.1 )
 
     if ( postdraws==TRUE ) {
@@ -279,16 +302,19 @@ cch_plot_avgskill <- function( ymax=0.9 , x_seq=seq(from=0,to=1,length.out=60) ,
         lines( c(y,y) , c(0,sk) , lty=2 , lwd=0.5 )
     }
 
-    do_line_to(18)
-    do_line_to(31)
-    do_line_to(55)
-    sk18 <- mean(skill(18/ra,(k),(m),(b)))
-    sk55 <- mean(skill(55/ra,(k),(m),(b)))
-    lines( c(18/ra,55/ra) , c(sk18,sk55) , lty=2 )
+    if ( reflines==TRUE ) {
+        do_line_to(18)
+        do_line_to(age_max*ra)
+        do_line_to(age_match_18*ra)
+        lines( c(18/ra,age_match_18) , c(sk18,sk55) , lty=2 )
+    } else {
+        # just line for mean
+        do_line_to(age_max*ra)
+    }
 
 }
 
-cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=col.alpha("black",0.5) , fskillonly=TRUE , dosample=FALSE , draw_globalmean=TRUE , draw_legend=TRUE , alpha=0.5 , show_points=FALSE , lwd=1.5 , adj_margins=TRUE , part=3 , skip=0 ) {
+cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=col.alpha("black",0.5) , fskillonly=TRUE , dosample=FALSE , draw_globalmean=TRUE , draw_legend=TRUE , alpha=0.5 , show_points=FALSE , lwd=1.5 , adj_margins=TRUE , part=3 , skip=0 , ... ) {
 
     if ( adj_margins==TRUE )
         par(mgp = c(1.5, 0.2, 0), mar = c(1.2, 0.5, 1.5, 0.25) + 0.1, tck = -0.02)
@@ -300,7 +326,7 @@ cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=
     if ( skip > 0 ) for ( z in 1:skip ) plot.new()
 
     if ( draw_globalmean==TRUE ) {
-        cch_plot_avgskill()
+        cch_plot_avgskill( reflines=FALSE )
         mtext( concat("Global mean") , adj=0 )
     }
 
@@ -311,7 +337,7 @@ cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=
         text( xp$age_peak+0.2 , xp$ymax/1.33 , "obs range" , col=fcol , cex=1.2 , pos=4 , offset=0.1 )
     }
 
-    for ( i in map_id ) cch_plot_curve( map_id=i , col=fcol , alpha=alpha , pts=show_points , lwd=lwd , jitter=FALSE , sample_post=dosample , skill_only=fskillonly , part=part )
+    for ( i in map_id ) cch_plot_curve( map_id=i , col=fcol , alpha=alpha , pts=show_points , lwd=lwd , jitter=FALSE , sample_post=dosample , skill_only=fskillonly , part=part , ... )
 }
 
 

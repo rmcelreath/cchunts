@@ -196,7 +196,7 @@ make_joint <- function( data_sets , ... ) {
 }
 
 # preps joined data sets so ready to feed into Stan model
-prep_data <- function( dat , debug=FALSE , dogs_miss=0 , guns_miss=0 ) {
+prep_data <- function( dat , debug=FALSE , dogs_miss=-1 , guns_miss=-1 , all_miss=0 ) {
 
     N_soc <- length(unique(dat$society_id)) 
 
@@ -231,10 +231,10 @@ prep_data <- function( dat , debug=FALSE , dogs_miss=0 , guns_miss=0 ) {
                     if ( all(is.na(dogsi)) ) {
                         # all NA, so just set all to zero
                         # if all missing, nothing to gain by marginalizing
-                        dat$dogs[idx] <- rep(0,length(idx))
+                        dat$dogs[idx] <- rep( all_miss , length(idx))
                     } else {
                         # replace NAs with dogs_miss
-                        dat$dogs[idx] <- rep(dogs_miss,length(idx))
+                        dat$dogs[idx] <- rep( dogs_miss , length(idx))
                     }
                 }
             }#i

@@ -6,12 +6,13 @@
   Loads data, compiles model, and samples from posterior.
 }
 \usage{
-cchmodel_run( model_code=cchmodel_full , sites=cchunts_data_sets , dogs_miss=-1 , guns_miss=-1 , prior_scale=0.5 , n_chains=4 , the_seed=1208 , warmup=500 , iter=1000 , control=list( adapt_delta=0.99 , max_treedepth=13 ) , start , test=FALSE , ... )
+cchmodel_run( model_code=cchmodel_full , sites=cchunts_data_sets , simdat , dogs_miss=-1 , guns_miss=-1 , prior_scale=0.5 , n_chains=4 , the_seed=1208 , warmup=500 , iter=1000 , control=list( adapt_delta=0.99 , max_treedepth=13 ) , start , test=FALSE , ... )
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
     \item{model_code}{A character vector specifying a Stan model. Defaults to \code{cchmodel_full}, the model used in the analysis.}
     \item{sites}{Character vector of sites to include. Defaults to full list in \code{cchunts_data_sets}}
+    \itme{simdat}{When present, a table of simulated data to use, produced by sim_multi.}
     \item{dogs_miss}{Value to use for \code{NA} values in dogs variable. -1 indicates marginalize in model.}
     \item{guns_miss}{Value to use for \code{NA} values in firearms variable. -1 indicates marginalize in model.}
     \item{prior_scale}{Common factor used to adjust scale of many priors in model.}
@@ -25,7 +26,7 @@ cchmodel_run( model_code=cchmodel_full , sites=cchunts_data_sets , dogs_miss=-1 
     \item{...}{Additonal arguments, to pass to \code{stan}}
 }
 \details{
-  This function takes the code for a Stan model, a list of sites, and various optional arguments. It then calls \code{make_joint}, \code{prep_data}, and execites the \code{stan} model.
+  This function takes the code for a Stan model, a list of sites, and various optional arguments. It then calls \code{make_joint}, \code{prep_data}, and executes the \code{stan} model.
 }
 \value{
 When successful, an object of class \code{stanfit}.

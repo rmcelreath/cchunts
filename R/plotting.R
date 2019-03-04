@@ -314,7 +314,7 @@ cch_plot_avgskill <- function( ymax=0.9 , x_seq=seq(from=0,to=1,length.out=60) ,
 
 }
 
-cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=col.alpha("black",0.5) , fskillonly=TRUE , dosample=FALSE , draw_globalmean=TRUE , draw_legend=TRUE , alpha=0.5 , show_points=FALSE , lwd=1.5 , adj_margins=TRUE , part=3 , skip=0 , ... ) {
+cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=col.alpha("black",0.5) , fskillonly=TRUE , dosample=FALSE , draw_globalmean=TRUE , draw_legend=TRUE , alpha=0.5 , show_points=FALSE , lwd=1.5 , adj_margins=TRUE , part=3 , skip=0 , do_ref_lines=TRUE , ... ) {
 
     if ( adj_margins==TRUE )
         par(mgp = c(1.5, 0.2, 0), mar = c(1.2, 0.5, 1.5, 0.25) + 0.1, tck = -0.02)
@@ -326,7 +326,7 @@ cch_plot_grid <- function( map_id=1:40 , nrow=7 , ncol=6 , col=cchpal[4] , col2=
     if ( skip > 0 ) for ( z in 1:skip ) plot.new()
 
     if ( draw_globalmean==TRUE ) {
-        cch_plot_avgskill( reflines=FALSE )
+        cch_plot_avgskill( reflines=do_ref_lines )
         mtext( concat("Global mean") , adj=0 )
     }
 

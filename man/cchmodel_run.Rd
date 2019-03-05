@@ -12,7 +12,7 @@ cchmodel_run( model_code=cchmodel_full , sites=cchunts_data_sets , simdat , dogs
 \arguments{
     \item{model_code}{A character vector specifying a Stan model. Defaults to \code{cchmodel_full}, the model used in the analysis.}
     \item{sites}{Character vector of sites to include. Defaults to full list in \code{cchunts_data_sets}}
-    \itme{simdat}{When present, a table of simulated data to use, produced by sim_multi.}
+    \item{simdat}{When present, a table of simulated data to use, produced by sim_multi.}
     \item{dogs_miss}{Value to use for \code{NA} values in dogs variable. -1 indicates marginalize in model.}
     \item{guns_miss}{Value to use for \code{NA} values in firearms variable. -1 indicates marginalize in model.}
     \item{prior_scale}{Common factor used to adjust scale of many priors in model.}

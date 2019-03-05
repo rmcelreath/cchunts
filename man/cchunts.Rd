@@ -73,6 +73,28 @@ data(Ziker)
         \item a_n_x : Variables referencing assistant number \code{n}, differing by availability in each data set
     }
 }
+\details{
+See references below for original data sources and details of data collection in each case. Special notes follow for some of the data sets.
+
+Siren: Although hunters at this study site sometimes hunt in groups, the data collection methods did not entail the documentation of hunting partners. Therefore, this dataset includes only hunting trips in which an individual was hunting solitarily.
+
+Ross: These data were obtained via focal observations of hunters by the lead researcher during preliminary fieldwork on hunting strategies at this field site.
+
+Franzen: This study was focused primarily on successful hunting trips, so unsuccessful trips are largely undocumented in this dataset.
+
+Ready: Hunters at this study site engage in multiple forms of marine foraging and trapping, but only terrestrial hunting trips are included in this dataset.
+
+Hill_Kintigh: Drawn from the supplement to the Hill and Kintigh (2009) article, this dataset treats all trips as independent, though the ethnographic descriptions of this site indicate that hunters often call for assistance from nearby hunters when pursuing prey.
+
+Lupo_Schmitt: This dataset includes occasional records in which individuals temporarily departed a communal hunting group to hunt in smaller groups or independently, which were recorded as discrete outings.
+
+Ziker: Hunters at this study site engage in multiple forms of marine foraging and trapping, but only terrestrial hunting trips are included in this dataset.
+
+Bird_Bird_Codding: This dataset includes observations of female foragers when they were accompanied by men on trips, but not women on foraging trips that did not include male foragers.
+
+Healey_Nen_PNG: These data were obtained via retrospective observations of hunters by the lead researcher during preliminary fieldwork on hunting strategies at this field site.
+
+}
 \value{
 }
 \references{

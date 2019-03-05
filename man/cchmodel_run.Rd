@@ -37,8 +37,17 @@ When successful, an object of class \code{stanfit}.
 
 # test compilation and sampling 
 # for the full model on all sites
+# set test=FALSE to run for real --- will take a while!
 library(rstan)
 test_fit <- cchmodel_run( test=TRUE )
+
+# plot grid of skill functions
+dat <- make_joint()
+dat_list <- prep_data( dat , dogs_miss=-1 , guns_miss=-1 )
+post <- extract(test_fit)
+cch_plot_grid( 1:40 , nrow=7 , ncol=6 , col=cchpal[4] , fskillonly=TRUE , 
+    dosample=FALSE , draw_globalmean=TRUE , draw_legend=TRUE , alpha=0.5 , 
+    show_points=FALSE , lwd=1.5 )
 
 # see the Stan model code
 # this is long and heavily commented

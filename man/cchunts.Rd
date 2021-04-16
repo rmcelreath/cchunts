@@ -65,9 +65,9 @@ data(Ziker)
         \item harvest : Harvest in kilograms
         \item forager_id : Unique indentifier for forager
         \item forager_id_orig : ID in raw data (for reference and cross-check)
-        \item age_type : Either \code{Exact} age or \code{Interval} age
-        \item age_dist_1 : When age_type \code{Exact}, age in years. Otherwise lower bound of interval.
-        \item age_dist_2 : When age_type \code{Exact}, standard error of age. Otherwise upper bound of interval.
+        \item age_type : Either \code{Exact} age, \code{Uncertain} age, or \code{Interval} age
+        \item age_dist_1 : When age_type \code{Exact}, age in years. When age_type \code{Uncertain}, mean age in years. Otherwise lower bound of interval.
+        \item age_dist_2 : When age_type \code{Uncertain}, standard error of age. Otherwise upper bound of interval.
         \item dogs : 0/1 indicator of whether dogs were used on trip
         \item gun : 0/1 indicator of firearm use
         \item a_n_x : Variables referencing assistant number \code{n}, differing by availability in each data set
